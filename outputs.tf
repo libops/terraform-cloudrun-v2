@@ -8,7 +8,3 @@ output "urls" {
     region => service.uri
   }
 }
-
-output "gsa" {
-  value = google_service_account.service_account.email
-}
