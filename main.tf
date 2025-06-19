@@ -53,8 +53,6 @@ resource "google_cloud_run_v2_service" "cloudrun" {
             http_get {
               path = liveness_probe.value
             }
-            period_seconds    = 300
-            failure_threshold = 1
           }
         }
 
