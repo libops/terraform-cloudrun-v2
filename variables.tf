@@ -2,6 +2,10 @@ variable "name" {
   type = string
 }
 
+variable "gsa" {
+  type = string
+}
+
 variable "min_instances" {
   type    = string
   default = "0"
