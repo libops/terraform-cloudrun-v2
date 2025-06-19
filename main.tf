@@ -16,7 +16,7 @@ resource "google_cloud_run_v2_service" "cloudrun" {
   for_each     = toset(var.regions)
   name         = var.name
   location     = each.value
-  launch_stage = "BETA"
+  launch_stage = "GA"
   project      = var.project
 
   lifecycle {
