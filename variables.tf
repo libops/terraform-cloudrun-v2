@@ -1,21 +1,24 @@
 variable "name" {
-  type = string
+  type        = string
+  description = "Name of the Cloud Run service"
 }
 
 variable "gsa" {
   type        = string
   default     = ""
-  description = "Service account name to use. If empty, creates a new one."
+  description = "Service account name the Cloud Run service will run as. If empty, creates a new one."
 }
 
 variable "min_instances" {
-  type    = string
-  default = "0"
+  type        = string
+  default     = "0"
+  description = "Minimum number of instances to keep running"
 }
 
 variable "max_instances" {
-  type    = string
-  default = "100"
+  type        = string
+  default     = "100"
+  description = "Maximum number of instances to scale to"
 }
 
 variable "regions" {
@@ -60,7 +63,8 @@ variable "secrets" {
     secret_id   = string
     secret_name = string
   }))
-  default = []
+  default     = []
+  description = "List of Secret Manager secrets to mount as environment variables"
 }
 
 variable "containers" {
@@ -79,6 +83,7 @@ variable "containers" {
       mount_path = string
     })), [])
   }))
+  description = "List of container configurations to run in the service. At least one container needs a port. This allows easily configuring multi-container deployments."
 }
 
 variable "addl_env_vars" {
@@ -86,7 +91,8 @@ variable "addl_env_vars" {
     name  = string
     value = string
   }))
-  default = []
+  default     = []
+  description = "Additional environment variables to set in containers"
 }
 
 variable "empty_dir_volumes" {
@@ -94,7 +100,8 @@ variable "empty_dir_volumes" {
     name       = string
     size_limit = optional(string, "2Mi")
   }))
-  default = []
+  default     = []
+  description = "List of empty directory volumes to create and mount"
 }
 
 
@@ -104,5 +111,6 @@ variable "gcs_volumes" {
     bucket    = string
     read_only = optional(bool, true)
   }))
-  default = []
+  default     = []
+  description = "List of Google Cloud Storage buckets to mount as volumes. Must ensure the Cloud Run GSA has proper IAM set on the bucket"
 }

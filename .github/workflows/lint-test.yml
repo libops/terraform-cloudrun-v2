@@ -1,0 +1,46 @@
+name: Lint and Test
+
+on:
+  push:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Install terraform-docs
+        run: go install github.com/terraform-docs/terraform-docs@v0.20.0
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive .
+
+      - name: Generate Documentation
+        run: make docs
+
+      - name: Check for Documentation Changes
+        run: |
+          if ! git diff --exit-code README.md; then
+            echo "❌ Documentation is out of date. Please run 'make docs' and commit the changes."
+            exit 1
+          else
+            echo "✅ Documentation is up to date."
+          fi
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
