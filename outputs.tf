@@ -15,3 +15,15 @@ output "urls" {
     region => service.uri
   }
 }
+
+output "url" {
+  value = values(google_cloud_run_v2_service.cloudrun)[0].uri
+}
+
+output "gsaEmail" {
+  value = data.google_service_account.service_account.email
+}
+
+output "gsa" {
+  value = data.google_service_account.service_account.name
+}

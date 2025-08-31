@@ -2,14 +2,27 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "6.44.0"
+      version = "~> 6.0"
     }
   }
 }
 
-data "google_service_account" "service_account" {
-  account_id = var.gsa
+resource "google_service_account" "service_account" {
+  count      = var.gsa == "" ? 1 : 0
+  account_id = "cr-${var.name}"
   project    = var.project
+}
+
+data "google_service_account" "service_account" {
+  account_id = var.gsa == "" ? google_service_account.service_account[0].name : var.gsa
+  project    = var.project
+}
+
+resource "google_project_iam_member" "sa_role" {
+  count   = var.gsa == "" ? 1 : 0
+  project = var.project
+  role    = "roles/iam.serviceAccountUser"
+  member  = format("serviceAccount:%s", data.google_service_account.service_account.email)
 }
 
 resource "google_cloud_run_v2_service" "cloudrun" {
@@ -140,12 +153,19 @@ resource "google_cloud_run_v2_service" "cloudrun" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "invoker" {
-  for_each = toset(var.regions)
-  location = each.value
-  name     = google_cloud_run_v2_service.cloudrun[each.value].name
+  for_each = {
+    for pair in setproduct(var.regions, var.invokers) :
+    "${pair[0]}-${pair[1]}" => {
+      region = pair[0]
+      member = pair[1]
+    }
+  }
+
+  location = each.value.region
+  name     = google_cloud_run_v2_service.cloudrun[each.value.region].name
   project  = var.project
   role     = "roles/run.invoker"
-  member   = "allUsers"
+  member   = each.value.member
 }
 
 # create a serverless NEG for this set of regional services

@@ -1,42 +1,6 @@
 {
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
-    'config:best-practices',
-    ':rebaseStalePrs',
+    'github>libops/renovate-config:default.json5',
   ],
-  packageRules: [
-    {
-      matchUpdateTypes: [
-        'minor',
-        'patch',
-        'digest',
-      ],
-      groupName: 'bump-dependencies',
-      schedule: [
-        '* 22 * * 5',
-      ],
-      matchPackageNames: [
-        '*',
-      ],
-    },
-    {
-      matchUpdateTypes: [
-        'major',
-      ],
-      groupName: 'all major updates',
-      schedule: [
-        '* 22 1-7 * *',
-      ],
-      matchPackageNames: [
-        '*',
-      ],
-    },
-  ],
-  labels: [
-    'dependencies',
-  ],
-  osvVulnerabilityAlerts: true,
-  dependencyDashboardOSVVulnerabilitySummary: 'unresolved',
-  vulnerabilityAlerts: {
-    enabled: true,
-  },
 }
