@@ -3,7 +3,9 @@ variable "name" {
 }
 
 variable "gsa" {
-  type = string
+  type        = string
+  default     = ""
+  description = "Service account name to use. If empty, creates a new one."
 }
 
 variable "min_instances" {
@@ -40,8 +42,15 @@ variable "project" {
 }
 
 variable "skipNeg" {
-  type    = bool
-  default = false
+  type        = bool
+  default     = false
+  description = "Skip creating Network Endpoint Group and Backend Service"
+}
+
+variable "invokers" {
+  type        = list(string)
+  default     = ["allUsers"]
+  description = "List of members to grant Cloud Run invoker role"
 }
 
 variable "secrets" {
