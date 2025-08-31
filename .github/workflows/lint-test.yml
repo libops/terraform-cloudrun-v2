@@ -16,12 +16,13 @@ jobs:
         with:
           terraform_version: latest
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
       - name: Install terraform-docs
-        run: |
-          curl -sSLo ./terraform-docs.tar.gz https://terraform-docs.io/dl/v0.20.0/terraform-docs-v0.20.0-$(uname)-amd64.tar.gz
-          tar -xzf terraform-docs.tar.gz
-          chmod +x terraform-docs
-          sudo mv terraform-docs /usr/local/bin/terraform-docs
+        run: go install github.com/terraform-docs/terraform-docs@v0.20.0
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive .
