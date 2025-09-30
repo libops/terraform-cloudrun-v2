@@ -44,8 +44,8 @@ resource "google_cloud_run_v2_service" "cloudrun" {
       max_instance_count = var.max_instances
     }
 
-    service_account = data.google_service_account.service_account.email
-
+    service_account               = data.google_service_account.service_account.email
+    gpu_zonal_redundancy_disabled = true
     dynamic "containers" {
       for_each = var.containers
       content {
