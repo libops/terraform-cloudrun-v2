@@ -45,7 +45,7 @@ resource "google_cloud_run_v2_service" "cloudrun" {
     }
 
     service_account               = data.google_service_account.service_account.email
-    gpu_zonal_redundancy_disabled = true
+    gpu_zonal_redundancy_disabled = anytrue([for c in var.containers : c.gpus != ""])
     dynamic "containers" {
       for_each = var.containers
       content {
