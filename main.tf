@@ -36,13 +36,13 @@ resource "google_cloud_run_v2_service" "cloudrun" {
     create_before_destroy = true
   }
 
+  scaling {
+    min_instance_count = var.min_instances
+    max_instance_count = var.max_instances
+  }
+
   template {
     execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
-
-    scaling {
-      min_instance_count = var.min_instances
-      max_instance_count = var.max_instances
-    }
 
     service_account               = data.google_service_account.service_account.email
     gpu_zonal_redundancy_disabled = anytrue([for c in var.containers : c.gpus != ""])
