@@ -128,6 +128,18 @@ resource "google_cloud_run_v2_service" "cloudrun" {
       }
     }
 
+    dynamic "vpc_access" {
+      for_each = var.vpc_direct_egress == "OFF" ? [] : [true]
+      content {
+        egress = var.vpc_direct_egress
+        network_interfaces {
+          network    = var.vpc_direct_egress_network
+          subnetwork = var.vpc_direct_egress_subnetwork
+          tags       = var.vpc_direct_egress_tags
+        }
+      }
+    }
+
     dynamic "volumes" {
       for_each = var.empty_dir_volumes
       content {

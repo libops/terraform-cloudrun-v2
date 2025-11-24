@@ -50,6 +50,10 @@ No modules.
 | <a name="input_regions"></a> [regions](#input\_regions) | The GCP region(s) to deploy to | `list(string)` | <pre>[<br/>  "us-east4",<br/>  "us-east5",<br/>  "us-central1",<br/>  "us-west3",<br/>  "us-west1",<br/>  "us-west4",<br/>  "us-south1",<br/>  "northamerica-northeast1",<br/>  "northamerica-northeast2",<br/>  "northamerica-south1",<br/>  "australia-southeast1",<br/>  "australia-southeast2"<br/>]</pre> | no |
 | <a name="input_secrets"></a> [secrets](#input\_secrets) | List of Secret Manager secrets to mount as environment variables | <pre>list(object({<br/>    name        = string<br/>    secret_id   = string<br/>    secret_name = string<br/>  }))</pre> | `[]` | no |
 | <a name="input_skipNeg"></a> [skipNeg](#input\_skipNeg) | Skip creating Network Endpoint Group and Backend Service | `bool` | `false` | no |
+| <a name="input_vpc_direct_egress"></a> [vpc\_direct\_egress](#input\_vpc\_direct\_egress) | Traffic VPC egress settings. Possible values are: `ALL_TRAFFIC`, `PRIVATE_RANGES_ONLY`. | `string` | `"OFF"` | no |
+| <a name="input_vpc_direct_egress_network"></a> [vpc\_direct\_egress\_network](#input\_vpc\_direct\_egress\_network) | The VPC network that the Cloud Run resource will be able to send traffic to | `string` | `"default"` | no |
+| <a name="input_vpc_direct_egress_subnetwork"></a> [vpc\_direct\_egress\_subnetwork](#input\_vpc\_direct\_egress\_subnetwork) | The VPC subnetwork that the Cloud Run resource will get IPs from | `string` | `"default"` | no |
+| <a name="input_vpc_direct_egress_tags"></a> [vpc\_direct\_egress\_tags](#input\_vpc\_direct\_egress\_tags) | Network tags applied to this Cloud Run service | `list(string)` | `null` | no |
 
 ## Outputs
 

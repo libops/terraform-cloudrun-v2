@@ -114,3 +114,32 @@ variable "gcs_volumes" {
   default     = []
   description = "List of Google Cloud Storage buckets to mount as volumes. Must ensure the Cloud Run GSA has proper IAM set on the bucket"
 }
+
+
+variable "vpc_direct_egress" {
+  type        = string
+  description = "Traffic VPC egress settings. Possible values are: `ALL_TRAFFIC`, `PRIVATE_RANGES_ONLY`."
+  default     = "OFF"
+  validation {
+    condition     = contains(["OFF", "ALL_TRAFFIC", "PRIVATE_RANGES_ONLY"], var.vpc_direct_egress)
+    error_message = "The 'vpc_direct_egress' variable must be one of 'ALL_TRAFFIC' or 'PRIVATE_RANGES_ONLY'"
+  }
+}
+
+variable "vpc_direct_egress_network" {
+  type        = string
+  description = "The VPC network that the Cloud Run resource will be able to send traffic to"
+  default     = "default"
+}
+
+variable "vpc_direct_egress_subnetwork" {
+  type        = string
+  default     = "default"
+  description = "The VPC subnetwork that the Cloud Run resource will get IPs from"
+}
+
+variable "vpc_direct_egress_tags" {
+  type        = list(string)
+  default     = null
+  description = "Network tags applied to this Cloud Run service"
+}
