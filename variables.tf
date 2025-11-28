@@ -5,7 +5,6 @@ variable "name" {
 
 variable "gsa" {
   type        = string
-  default     = ""
   description = "Service account name the Cloud Run service will run as. If empty, creates a new one."
 }
 

@@ -23,13 +23,3 @@ output "url" {
   value       = values(google_cloud_run_v2_service.cloudrun)[0].uri
   description = "Primary Cloud Run service URL (first region)"
 }
-
-output "gsaEmail" {
-  value       = data.google_service_account.service_account.email
-  description = "Email address of the service account used by Cloud Run"
-}
-
-output "gsa" {
-  value       = data.google_service_account.service_account.name
-  description = "Name of the service account used by Cloud Run"
-}
