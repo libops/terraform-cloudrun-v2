@@ -19,10 +19,6 @@ resource "google_cloud_run_v2_service" "cloudrun" {
   launch_stage = "GA"
   project      = var.project
 
-  lifecycle {
-    create_before_destroy = true
-  }
-
   scaling {
     min_instance_count = var.min_instances
     max_instance_count = var.max_instances
