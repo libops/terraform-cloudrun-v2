@@ -16,10 +16,13 @@ resource "google_cloud_run_v2_service" "cloudrun" {
   for_each     = toset(var.regions)
   name         = var.name
   location     = each.value
-  launch_stage = "GA"
+  launch_stage = var.launch_stage
   project      = var.project
+  ingress      = var.ingress
+  labels       = var.labels
 
-  deletion_protection = false
+  deletion_protection = var.deletion_protection
+  custom_audiences    = var.custom_audiences
 
   scaling {
     min_instance_count = var.min_instances
@@ -29,8 +32,11 @@ resource "google_cloud_run_v2_service" "cloudrun" {
   template {
     execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
 
-    service_account               = data.google_service_account.service_account.email
-    gpu_zonal_redundancy_disabled = anytrue([for c in var.containers : c.gpus != ""])
+    service_account                  = data.google_service_account.service_account.email
+    gpu_zonal_redundancy_disabled    = anytrue([for c in var.containers : c.gpus != ""])
+    max_instance_request_concurrency = var.max_instance_request_concurrency
+    timeout                          = var.timeout_seconds == null ? null : "${var.timeout_seconds}s"
+
     dynamic "containers" {
       for_each = var.containers
       content {
@@ -50,6 +56,15 @@ resource "google_cloud_run_v2_service" "cloudrun" {
           content {
             http_get {
               path = liveness_probe.value
+            }
+          }
+        }
+
+        dynamic "startup_probe" {
+          for_each = containers.value.startup_probe != "" ? [containers.value.startup_probe] : []
+          content {
+            http_get {
+              path = startup_probe.value
             }
           }
         }

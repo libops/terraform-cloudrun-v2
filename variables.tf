@@ -44,6 +44,72 @@ variable "project" {
   description = "The GCP project to use"
 }
 
+variable "launch_stage" {
+  type        = string
+  default     = "GA"
+  description = "Cloud Run launch stage for the service."
+
+  validation {
+    condition     = contains(["ALPHA", "BETA", "GA"], var.launch_stage)
+    error_message = "launch_stage must be one of ALPHA, BETA, or GA."
+  }
+}
+
+variable "ingress" {
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+  description = "Cloud Run ingress setting."
+
+  validation {
+    condition = contains([
+      "INGRESS_TRAFFIC_ALL",
+      "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ], var.ingress)
+    error_message = "ingress must be one of INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY, or INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER."
+  }
+}
+
+variable "deletion_protection" {
+  type        = bool
+  default     = false
+  description = "Whether to enable deletion protection on the Cloud Run service."
+}
+
+variable "labels" {
+  type        = map(string)
+  default     = {}
+  description = "Labels to apply to each Cloud Run service."
+}
+
+variable "custom_audiences" {
+  type        = list(string)
+  default     = []
+  description = "Custom audiences accepted by each Cloud Run service."
+}
+
+variable "timeout_seconds" {
+  type        = number
+  default     = null
+  description = "Optional request timeout for each Cloud Run service, in seconds."
+
+  validation {
+    condition     = var.timeout_seconds == null || (var.timeout_seconds >= 1 && var.timeout_seconds <= 3600)
+    error_message = "timeout_seconds must be between 1 and 3600 when set."
+  }
+}
+
+variable "max_instance_request_concurrency" {
+  type        = number
+  default     = null
+  description = "Optional maximum concurrent requests per Cloud Run instance."
+
+  validation {
+    condition     = var.max_instance_request_concurrency == null || (var.max_instance_request_concurrency >= 1 && var.max_instance_request_concurrency <= 1000)
+    error_message = "max_instance_request_concurrency must be between 1 and 1000 when set."
+  }
+}
+
 variable "skipNeg" {
   type        = bool
   default     = false
@@ -76,6 +142,7 @@ variable "containers" {
     memory         = optional(string, "512Mi")
     cpu            = optional(string, "1000m")
     liveness_probe = optional(string, "")
+    startup_probe  = optional(string, "")
     gpus           = optional(string, "")
     volume_mounts = optional(list(object({
       name       = string
