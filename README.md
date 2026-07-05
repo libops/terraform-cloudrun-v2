@@ -8,14 +8,14 @@ Variables support GPUs, GCS mounts, multi-containers, service ingress, custom au
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_google"></a> [google](#requirement\_google) | ~> 7.0 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 7.33.0 |
+| ---- | ------- |
+| <a name="provider_google"></a> [google](#provider\_google) | ~> 7.0 |
 
 ## Modules
 
@@ -24,7 +24,7 @@ No modules.
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [google_cloud_run_v2_service.cloudrun](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_service) | resource |
 | [google_cloud_run_v2_service_iam_member.invoker](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_service_iam_member) | resource |
 | [google_compute_backend_service.backend](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_backend_service) | resource |
@@ -34,7 +34,7 @@ No modules.
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_addl_env_vars"></a> [addl\_env\_vars](#input\_addl\_env\_vars) | Additional environment variables to set in containers | <pre>list(object({<br/>    name  = string<br/>    value = string<br/>  }))</pre> | `[]` | no |
 | <a name="input_containers"></a> [containers](#input\_containers) | List of container configurations to run in the service. At least one container needs a port. This allows easily configuring multi-container deployments. | <pre>list(object({<br/>    image          = string<br/>    name           = string<br/>    command        = optional(list(string), null)<br/>    args           = optional(list(string), null)<br/>    port           = optional(number, 0)<br/>    memory         = optional(string, "512Mi")<br/>    cpu            = optional(string, "1000m")<br/>    liveness_probe = optional(string, "")<br/>    startup_probe  = optional(string, "")<br/>    gpus           = optional(string, "")<br/>    volume_mounts = optional(list(object({<br/>      name       = string<br/>      mount_path = string<br/>    })), [])<br/>  }))</pre> | n/a | yes |
 | <a name="input_custom_audiences"></a> [custom\_audiences](#input\_custom\_audiences) | Custom audiences accepted by each Cloud Run service. | `list(string)` | `[]` | no |
@@ -63,7 +63,7 @@ No modules.
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_backend"></a> [backend](#output\_backend) | Backend service ID for load balancer (empty if skipNeg is true) |
 | <a name="output_name"></a> [name](#output\_name) | Map of region to Cloud Run service names |
 | <a name="output_url"></a> [url](#output\_url) | Primary Cloud Run service URL (first region) |
