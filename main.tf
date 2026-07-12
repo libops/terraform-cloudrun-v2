@@ -7,6 +7,23 @@ terraform {
   }
 }
 
+locals {
+  vpc_direct_egress_network = (
+    try(trimspace(var.vpc_direct_egress_network), "") == ""
+    ? null
+    : trimspace(var.vpc_direct_egress_network)
+  )
+  vpc_direct_egress_subnetwork = (
+    try(trimspace(var.vpc_direct_egress_subnetwork), "") == ""
+    ? null
+    : trimspace(var.vpc_direct_egress_subnetwork)
+  )
+  vpc_direct_egress_subnetwork_region = try(
+    regex("projects/[^/]+/regions/([^/]+)/subnetworks/[^/]+$", local.vpc_direct_egress_subnetwork)[0],
+    null,
+  )
+}
+
 data "google_service_account" "service_account" {
   account_id = var.gsa
   project    = var.project
@@ -23,6 +40,25 @@ resource "google_cloud_run_v2_service" "cloudrun" {
 
   deletion_protection = var.deletion_protection
   custom_audiences    = var.custom_audiences
+
+  lifecycle {
+    precondition {
+      condition = (
+        var.vpc_direct_egress == "OFF"
+        || local.vpc_direct_egress_network != null
+        || local.vpc_direct_egress_subnetwork != null
+      )
+      error_message = "Direct VPC egress requires vpc_direct_egress_network, vpc_direct_egress_subnetwork, or both."
+    }
+    precondition {
+      condition = (
+        var.vpc_direct_egress == "OFF"
+        || local.vpc_direct_egress_subnetwork_region == null
+        || local.vpc_direct_egress_subnetwork_region == each.key
+      )
+      error_message = "A fully qualified Direct VPC subnetwork must belong to the Cloud Run service region."
+    }
+  }
 
   scaling {
     min_instance_count = var.min_instances
@@ -61,10 +97,18 @@ resource "google_cloud_run_v2_service" "cloudrun" {
         }
 
         dynamic "startup_probe" {
-          for_each = containers.value.startup_probe != "" ? [containers.value.startup_probe] : []
+          for_each = (
+            containers.value.startup_probe_config != null
+            || containers.value.startup_probe != ""
+          ) ? [true] : []
           content {
+            initial_delay_seconds = try(containers.value.startup_probe_config.initial_delay_seconds, null)
+            timeout_seconds       = try(containers.value.startup_probe_config.timeout_seconds, null)
+            period_seconds        = try(containers.value.startup_probe_config.period_seconds, null)
+            failure_threshold     = try(containers.value.startup_probe_config.failure_threshold, null)
+
             http_get {
-              path = startup_probe.value
+              path = try(containers.value.startup_probe_config.path, containers.value.startup_probe)
             }
           }
         }
@@ -133,8 +177,8 @@ resource "google_cloud_run_v2_service" "cloudrun" {
       content {
         egress = var.vpc_direct_egress
         network_interfaces {
-          network    = var.vpc_direct_egress_network
-          subnetwork = var.vpc_direct_egress_subnetwork
+          network    = local.vpc_direct_egress_network
+          subnetwork = local.vpc_direct_egress_subnetwork
           tags       = var.vpc_direct_egress_tags
         }
       }
