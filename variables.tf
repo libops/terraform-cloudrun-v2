@@ -143,13 +143,112 @@ variable "containers" {
     cpu            = optional(string, "1000m")
     liveness_probe = optional(string, "")
     startup_probe  = optional(string, "")
-    gpus           = optional(string, "")
+    startup_probe_config = optional(object({
+      path                  = string
+      initial_delay_seconds = optional(number, 0)
+      timeout_seconds       = optional(number, 1)
+      period_seconds        = optional(number, 10)
+      failure_threshold     = optional(number, 3)
+    }), null)
+    gpus = optional(string, "")
     volume_mounts = optional(list(object({
       name       = string
       mount_path = string
     })), [])
   }))
-  description = "List of container configurations to run in the service. At least one container needs a port. This allows easily configuring multi-container deployments."
+  description = "List of container configurations to run in the service. At least one container needs a port. startup_probe_config takes precedence over the legacy startup_probe path when both are set."
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : (
+        container.startup_probe_config != null
+        || container.startup_probe == ""
+        || can(regex("^/[^[:space:][:cntrl:]]*$", container.startup_probe))
+      )
+    ])
+    error_message = "startup_probe must be empty or begin with / and contain no whitespace or control characters."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : (
+        container.startup_probe_config == null
+        ? true
+        : try(
+          can(regex("^/[^[:space:][:cntrl:]]*$", container.startup_probe_config.path)),
+          false,
+        )
+      )
+    ])
+    error_message = "startup_probe_config.path must begin with / and contain no whitespace or control characters."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.initial_delay_seconds >= 0
+        && container.startup_probe_config.initial_delay_seconds <= 240
+        && floor(container.startup_probe_config.initial_delay_seconds) == container.startup_probe_config.initial_delay_seconds,
+        true
+      )
+    ])
+    error_message = "startup_probe_config.initial_delay_seconds must be a whole number from 0 through 240."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.timeout_seconds >= 1
+        && container.startup_probe_config.timeout_seconds <= 240
+        && floor(container.startup_probe_config.timeout_seconds) == container.startup_probe_config.timeout_seconds,
+        true
+      )
+    ])
+    error_message = "startup_probe_config.timeout_seconds must be a whole number from 1 through 240."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.period_seconds >= 1
+        && container.startup_probe_config.period_seconds <= 240
+        && floor(container.startup_probe_config.period_seconds) == container.startup_probe_config.period_seconds,
+        true
+      )
+    ])
+    error_message = "startup_probe_config.period_seconds must be a whole number from 1 through 240."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.failure_threshold >= 1
+        && floor(container.startup_probe_config.failure_threshold) == container.startup_probe_config.failure_threshold,
+        true
+      )
+    ])
+    error_message = "startup_probe_config.failure_threshold must be a positive whole number."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.timeout_seconds <= container.startup_probe_config.period_seconds,
+        true
+      )
+    ])
+    error_message = "startup_probe_config.timeout_seconds must be less than or equal to period_seconds."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.failure_threshold * container.startup_probe_config.period_seconds <= 240,
+        true
+      )
+    ])
+    error_message = "startup_probe_config.failure_threshold multiplied by period_seconds must not exceed 240 seconds."
+  }
 }
 
 variable "addl_env_vars" {
@@ -184,24 +283,24 @@ variable "gcs_volumes" {
 
 variable "vpc_direct_egress" {
   type        = string
-  description = "Traffic VPC egress settings. Possible values are: `ALL_TRAFFIC`, `PRIVATE_RANGES_ONLY`."
+  description = "Traffic VPC egress setting. Set to `OFF`, `ALL_TRAFFIC`, or `PRIVATE_RANGES_ONLY`."
   default     = "OFF"
   validation {
     condition     = contains(["OFF", "ALL_TRAFFIC", "PRIVATE_RANGES_ONLY"], var.vpc_direct_egress)
-    error_message = "The 'vpc_direct_egress' variable must be one of 'ALL_TRAFFIC' or 'PRIVATE_RANGES_ONLY'"
+    error_message = "vpc_direct_egress must be one of OFF, ALL_TRAFFIC, or PRIVATE_RANGES_ONLY."
   }
 }
 
 variable "vpc_direct_egress_network" {
   type        = string
-  description = "The VPC network that the Cloud Run resource will be able to send traffic to"
+  description = "VPC network for Direct VPC egress. Set this or vpc_direct_egress_subnetwork to null to let Cloud Run infer the omitted field."
   default     = "default"
 }
 
 variable "vpc_direct_egress_subnetwork" {
   type        = string
   default     = "default"
-  description = "The VPC subnetwork that the Cloud Run resource will get IPs from"
+  description = "VPC subnetwork from which Cloud Run receives IPs. Set this or vpc_direct_egress_network to null to let Cloud Run infer the omitted field."
 }
 
 variable "vpc_direct_egress_tags" {
