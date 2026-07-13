@@ -38,10 +38,15 @@ resource "google_cloud_run_v2_service" "cloudrun" {
   ingress      = var.ingress
   labels       = var.labels
 
-  deletion_protection = var.deletion_protection
-  custom_audiences    = var.custom_audiences
+  deletion_protection  = var.deletion_protection
+  default_uri_disabled = var.default_uri_disabled
+  custom_audiences     = var.custom_audiences
 
   lifecycle {
+    precondition {
+      condition     = !var.default_uri_disabled || contains(["ALPHA", "BETA"], var.launch_stage)
+      error_message = "Disabling the default Cloud Run URL is a preview feature and requires launch_stage ALPHA or BETA."
+    }
     precondition {
       condition = (
         var.vpc_direct_egress == "OFF"

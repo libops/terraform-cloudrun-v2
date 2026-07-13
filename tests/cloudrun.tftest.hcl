@@ -27,6 +27,38 @@ run "direct_vpc_off" {
     condition     = length(google_cloud_run_v2_service.cloudrun["us-central1"].template[0].vpc_access) == 0
     error_message = "vpc_access must be omitted when Direct VPC egress is off."
   }
+
+  assert {
+    condition     = !google_cloud_run_v2_service.cloudrun["us-central1"].default_uri_disabled
+    error_message = "The default run.app URL must remain enabled unless explicitly disabled."
+  }
+}
+
+run "default_uri_can_be_disabled_in_preview" {
+  command = plan
+
+  variables {
+    default_uri_disabled = true
+    launch_stage         = "BETA"
+  }
+
+  assert {
+    condition     = google_cloud_run_v2_service.cloudrun["us-central1"].default_uri_disabled
+    error_message = "The module must pass the explicit default-URL setting to Cloud Run."
+  }
+}
+
+run "default_uri_disable_rejects_ga_launch_stage" {
+  command = plan
+
+  variables {
+    default_uri_disabled = true
+    launch_stage         = "GA"
+  }
+
+  expect_failures = [
+    google_cloud_run_v2_service.cloudrun["us-central1"],
+  ]
 }
 
 run "direct_vpc_preserves_default_interface" {

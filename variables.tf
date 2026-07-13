@@ -76,6 +76,12 @@ variable "deletion_protection" {
   description = "Whether to enable deletion protection on the Cloud Run service."
 }
 
+variable "default_uri_disabled" {
+  type        = bool
+  default     = false
+  description = "Whether to disable the service's default run.app URL. This preview feature requires launch_stage ALPHA or BETA."
+}
+
 variable "labels" {
   type        = map(string)
   default     = {}
