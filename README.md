@@ -2,7 +2,7 @@
 
 Terraform module for a multi-region [Google Cloud Run v2 Service](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_service) behind a [serverless Network Endpoint Group (NEG)](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts).
 
-Variables support GPUs, GCS mounts, multi-containers, service ingress, custom audiences, request timeout, max concurrency, labels, and startup/liveness HTTP probes.
+Variables support GPUs, GCS mounts, ordered multi-container startup, service ingress, custom audiences, request timeout, max concurrency, labels, and startup/liveness HTTP probes.
 
 ## Direct VPC egress
 
@@ -29,6 +29,7 @@ containers = [{
   port  = 8080
   startup_probe_config = {
     path                  = "/startup"
+    port                  = 8080
     initial_delay_seconds = 10
     timeout_seconds       = 2
     period_seconds        = 5
@@ -38,6 +39,37 @@ containers = [{
 ```
 
 Probe settings are validated against [Cloud Run's startup-probe limits](https://cloud.google.com/run/docs/configuring/healthchecks). If both forms are set, `startup_probe_config` takes precedence. For Direct VPC readiness, the endpoint must verify a connection to an egress dependency before reporting success; either the endpoint can retry internally or it can return failure so Cloud Run retries it within the configured period and threshold window. A generic process-only endpoint does not cover the documented startup connection delay. Probe paths are part of the service's HTTP surface and are reachable by clients allowed through its ingress and authentication policy, so keep responses non-sensitive and make the handler free of state-changing side effects.
+
+For a multi-container service, set `depends_on` on the dependent container and
+give every dependency a startup probe. Cloud Run waits for those probes before
+starting the dependent container:
+
+```hcl
+containers = [
+  {
+    image = "us-docker.pkg.dev/example/project/vault@sha256:..."
+    name  = "vault"
+    startup_probe_config = {
+      path              = "/v1/sys/health?uninitcode=200"
+      port              = 8200
+      timeout_seconds   = 2
+      period_seconds    = 5
+      failure_threshold = 48
+    }
+  },
+  {
+    image      = "us-docker.pkg.dev/example/project/proxy@sha256:..."
+    name       = "proxy"
+    port       = 8080
+    depends_on = ["vault"]
+  },
+]
+```
+
+List dependencies before the containers that depend on them. Dependency names
+must be unique container names in the same service. Self, duplicate, forward,
+and unknown dependencies are rejected during planning, which also prevents
+dependency cycles.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -71,7 +103,7 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_addl_env_vars"></a> [addl\_env\_vars](#input\_addl\_env\_vars) | Additional environment variables to set in containers | <pre>list(object({<br/>    name  = string<br/>    value = string<br/>  }))</pre> | `[]` | no |
-| <a name="input_containers"></a> [containers](#input\_containers) | List of container configurations to run in the service. At least one container needs a port. startup\_probe\_config takes precedence over the legacy startup\_probe path when both are set. | <pre>list(object({<br/>    image          = string<br/>    name           = string<br/>    command        = optional(list(string), null)<br/>    args           = optional(list(string), null)<br/>    port           = optional(number, 0)<br/>    memory         = optional(string, "512Mi")<br/>    cpu            = optional(string, "1000m")<br/>    liveness_probe = optional(string, "")<br/>    startup_probe  = optional(string, "")<br/>    startup_probe_config = optional(object({<br/>      path                  = string<br/>      initial_delay_seconds = optional(number, 0)<br/>      timeout_seconds       = optional(number, 1)<br/>      period_seconds        = optional(number, 10)<br/>      failure_threshold     = optional(number, 3)<br/>    }), null)<br/>    gpus = optional(string, "")<br/>    volume_mounts = optional(list(object({<br/>      name       = string<br/>      mount_path = string<br/>    })), [])<br/>  }))</pre> | n/a | yes |
+| <a name="input_containers"></a> [containers](#input\_containers) | List of container configurations to run in the service. At least one container needs a port. depends\_on names containers that must pass their startup probes before this container starts. startup\_probe\_config takes precedence over the legacy startup\_probe path when both are set. | <pre>list(object({<br/>    image          = string<br/>    name           = string<br/>    command        = optional(list(string), null)<br/>    args           = optional(list(string), null)<br/>    depends_on     = optional(list(string), [])<br/>    port           = optional(number, 0)<br/>    memory         = optional(string, "512Mi")<br/>    cpu            = optional(string, "1000m")<br/>    liveness_probe = optional(string, "")<br/>    startup_probe  = optional(string, "")<br/>    startup_probe_config = optional(object({<br/>      path                  = string<br/>      port                  = optional(number, null)<br/>      initial_delay_seconds = optional(number, 0)<br/>      timeout_seconds       = optional(number, 1)<br/>      period_seconds        = optional(number, 10)<br/>      failure_threshold     = optional(number, 3)<br/>    }), null)<br/>    gpus = optional(string, "")<br/>    volume_mounts = optional(list(object({<br/>      name       = string<br/>      mount_path = string<br/>    })), [])<br/>  }))</pre> | n/a | yes |
 | <a name="input_custom_audiences"></a> [custom\_audiences](#input\_custom\_audiences) | Custom audiences accepted by each Cloud Run service. | `list(string)` | `[]` | no |
 | <a name="input_default_uri_disabled"></a> [default\_uri\_disabled](#input\_default\_uri\_disabled) | Whether to disable the service's default run.app URL. This preview feature requires launch\_stage ALPHA or BETA. | `bool` | `false` | no |
 | <a name="input_deletion_protection"></a> [deletion\_protection](#input\_deletion\_protection) | Whether to enable deletion protection on the Cloud Run service. | `bool` | `false` | no |
