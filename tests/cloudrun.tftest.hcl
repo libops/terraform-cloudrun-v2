@@ -207,6 +207,7 @@ run "structured_startup_probe" {
       startup_probe = "ignored-legacy-startup"
       startup_probe_config = {
         path                  = "/startup"
+        port                  = 9090
         initial_delay_seconds = 12
         timeout_seconds       = 4
         period_seconds        = 8
@@ -218,6 +219,7 @@ run "structured_startup_probe" {
   assert {
     condition = (
       google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].startup_probe[0].http_get[0].path == "/startup"
+      && google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].startup_probe[0].http_get[0].port == 9090
       && google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].startup_probe[0].initial_delay_seconds == 12
       && google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].startup_probe[0].timeout_seconds == 4
       && google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].startup_probe[0].period_seconds == 8
@@ -225,6 +227,119 @@ run "structured_startup_probe" {
     )
     error_message = "The structured startup probe must render all configured HTTP probe fields."
   }
+}
+
+run "ordered_sidecar_startup" {
+  command = plan
+
+  variables {
+    containers = [
+      {
+        image = "us-docker.pkg.dev/example/vault"
+        name  = "vault"
+        startup_probe_config = {
+          path              = "/v1/sys/health?uninitcode=200"
+          port              = 8200
+          timeout_seconds   = 2
+          period_seconds    = 5
+          failure_threshold = 48
+        }
+      },
+      {
+        image      = "us-docker.pkg.dev/example/proxy"
+        name       = "proxy"
+        port       = 8080
+        depends_on = ["vault"]
+      },
+    ]
+  }
+
+  assert {
+    condition = (
+      google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].startup_probe[0].http_get[0].port == 8200
+      && google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[1].depends_on == tolist(["vault"])
+    )
+    error_message = "A dependent ingress container must wait for the sidecar's port-specific startup probe."
+  }
+}
+
+run "container_dependency_rejects_unknown_name" {
+  command = plan
+
+  variables {
+    containers = [{
+      image      = "us-docker.pkg.dev/cloudrun/container/hello"
+      name       = "app"
+      port       = 8080
+      depends_on = ["missing"]
+    }]
+  }
+
+  expect_failures = [
+    var.containers,
+  ]
+}
+
+run "container_dependency_rejects_self_reference" {
+  command = plan
+
+  variables {
+    containers = [{
+      image      = "us-docker.pkg.dev/cloudrun/container/hello"
+      name       = "app"
+      port       = 8080
+      depends_on = ["app"]
+    }]
+  }
+
+  expect_failures = [
+    var.containers,
+  ]
+}
+
+run "container_dependency_rejects_forward_reference" {
+  command = plan
+
+  variables {
+    containers = [
+      {
+        image      = "us-docker.pkg.dev/example/proxy"
+        name       = "proxy"
+        port       = 8080
+        depends_on = ["vault"]
+      },
+      {
+        image = "us-docker.pkg.dev/example/vault"
+        name  = "vault"
+      },
+    ]
+  }
+
+  expect_failures = [
+    var.containers,
+  ]
+}
+
+run "containers_reject_duplicate_names" {
+  command = plan
+
+  variables {
+    containers = [
+      {
+        image = "us-docker.pkg.dev/cloudrun/container/hello"
+        name  = "app"
+        port  = 8080
+      },
+      {
+        image = "us-docker.pkg.dev/cloudrun/container/sidecar"
+        name  = "app"
+      },
+    ]
+  }
+
+  expect_failures = [
+    var.containers,
+  ]
 }
 
 run "legacy_startup_probe_rejects_non_absolute_path" {
@@ -235,6 +350,25 @@ run "legacy_startup_probe_rejects_non_absolute_path" {
       image         = "us-docker.pkg.dev/cloudrun/container/hello"
       name          = "app"
       startup_probe = "startup"
+    }]
+  }
+
+  expect_failures = [
+    var.containers,
+  ]
+}
+
+run "startup_probe_rejects_invalid_port" {
+  command = plan
+
+  variables {
+    containers = [{
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      name  = "app"
+      startup_probe_config = {
+        path = "/startup"
+        port = 0
+      }
     }]
   }
 

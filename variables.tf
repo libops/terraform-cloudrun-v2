@@ -144,6 +144,7 @@ variable "containers" {
     name           = string
     command        = optional(list(string), null)
     args           = optional(list(string), null)
+    depends_on     = optional(list(string), [])
     port           = optional(number, 0)
     memory         = optional(string, "512Mi")
     cpu            = optional(string, "1000m")
@@ -151,6 +152,7 @@ variable "containers" {
     startup_probe  = optional(string, "")
     startup_probe_config = optional(object({
       path                  = string
+      port                  = optional(number, null)
       initial_delay_seconds = optional(number, 0)
       timeout_seconds       = optional(number, 1)
       period_seconds        = optional(number, 10)
@@ -162,7 +164,40 @@ variable "containers" {
       mount_path = string
     })), [])
   }))
-  description = "List of container configurations to run in the service. At least one container needs a port. startup_probe_config takes precedence over the legacy startup_probe path when both are set."
+  description = "List of container configurations to run in the service. At least one container needs a port. depends_on names containers that must pass their startup probes before this container starts. startup_probe_config takes precedence over the legacy startup_probe path when both are set."
+
+  validation {
+    condition = (
+      length(var.containers) > 0 &&
+      length(distinct([for container in var.containers : container.name])) == length(var.containers) &&
+      alltrue([
+        for container in var.containers :
+        trimspace(container.name) != "" &&
+        can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", container.name))
+      ])
+    )
+    error_message = "containers must contain at least one entry with a unique, valid Cloud Run container name."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : (
+        length(distinct(container.depends_on)) == length(container.depends_on) &&
+        !contains(container.depends_on, container.name) &&
+        alltrue([
+          for dependency in container.depends_on :
+          (
+            contains([for candidate in var.containers : candidate.name], dependency) &&
+            try(
+              index([for candidate in var.containers : candidate.name], dependency),
+              length(var.containers),
+            ) < index([for candidate in var.containers : candidate.name], container.name)
+          )
+        ])
+      )
+    ])
+    error_message = "Each container dependency must name a preceding, different container exactly once."
+  }
 
   validation {
     condition = alltrue([
@@ -187,6 +222,21 @@ variable "containers" {
       )
     ])
     error_message = "startup_probe_config.path must begin with / and contain no whitespace or control characters."
+  }
+
+  validation {
+    condition = alltrue([
+      for container in var.containers : try(
+        container.startup_probe_config.port == null
+        || (
+          container.startup_probe_config.port >= 1
+          && container.startup_probe_config.port <= 65535
+          && floor(container.startup_probe_config.port) == container.startup_probe_config.port
+        ),
+        true
+      )
+    ])
+    error_message = "startup_probe_config.port must be null or a whole number from 1 through 65535."
   }
 
   validation {

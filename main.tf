@@ -81,10 +81,11 @@ resource "google_cloud_run_v2_service" "cloudrun" {
     dynamic "containers" {
       for_each = var.containers
       content {
-        image   = containers.value.image
-        name    = containers.value.name
-        command = containers.value.command
-        args    = containers.value.args
+        image      = containers.value.image
+        name       = containers.value.name
+        command    = containers.value.command
+        args       = containers.value.args
+        depends_on = containers.value.depends_on
         dynamic "ports" {
           for_each = containers.value.port != 0 ? [containers.value.port] : []
           content {
@@ -114,6 +115,7 @@ resource "google_cloud_run_v2_service" "cloudrun" {
 
             http_get {
               path = try(containers.value.startup_probe_config.path, containers.value.startup_probe)
+              port = try(containers.value.startup_probe_config.port, null)
             }
           }
         }
