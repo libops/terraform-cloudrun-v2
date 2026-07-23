@@ -165,7 +165,7 @@ resource "google_cloud_run_v2_service" "cloudrun" {
         }
 
         resources {
-          cpu_idle = containers.value.gpus == ""
+          cpu_idle = containers.value.gpus == "" ? containers.value.cpu_idle : false
           limits = merge(
             {
               memory = containers.value.memory,

@@ -148,6 +148,7 @@ variable "containers" {
     port           = optional(number, 0)
     memory         = optional(string, "512Mi")
     cpu            = optional(string, "1000m")
+    cpu_idle       = optional(bool, true)
     liveness_probe = optional(string, "")
     startup_probe  = optional(string, "")
     startup_probe_config = optional(object({
@@ -164,7 +165,7 @@ variable "containers" {
       mount_path = string
     })), [])
   }))
-  description = "List of container configurations to run in the service. At least one container needs a port. depends_on names containers that must pass their startup probes before this container starts. startup_probe_config takes precedence over the legacy startup_probe path when both are set."
+  description = "List of container configurations to run in the service. At least one container needs a port. cpu_idle defaults to request-scoped CPU for non-GPU containers; set it false when background work needs CPU outside requests. GPU containers always disable CPU idling. depends_on names containers that must pass their startup probes before this container starts. startup_probe_config takes precedence over the legacy startup_probe path when both are set."
 
   validation {
     condition = (

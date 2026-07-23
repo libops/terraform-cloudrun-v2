@@ -34,6 +34,33 @@ run "direct_vpc_off" {
   }
 }
 
+run "cpu_is_request_scoped_by_default" {
+  command = plan
+
+  assert {
+    condition     = google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].resources[0].cpu_idle
+    error_message = "Non-GPU containers must preserve request-scoped CPU by default."
+  }
+}
+
+run "cpu_can_be_always_allocated" {
+  command = plan
+
+  variables {
+    containers = [{
+      image    = "us-docker.pkg.dev/cloudrun/container/hello"
+      name     = "worker"
+      port     = 8080
+      cpu_idle = false
+    }]
+  }
+
+  assert {
+    condition     = !google_cloud_run_v2_service.cloudrun["us-central1"].template[0].containers[0].resources[0].cpu_idle
+    error_message = "cpu_idle=false must keep CPU allocated outside request processing."
+  }
+}
+
 run "default_uri_can_be_disabled_in_preview" {
   command = plan
 
